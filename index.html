@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Safety Management System – State Trustees</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --col-el1:      #cba188;
+    --col-el2:      #b2c2cf;
+    --col-el3:      #bee6dc;
+    --col-el4:      #b2b2cf;
+    --col-el5:      #f1d99a;
+    --col-el6:      #e7cdc2;
+    --col-centre:   #ffc695;
+    --col-bg:       #f6f6f6;
+    --col-text:     #333333;
+    --col-heading:  #132076;
+    --col-stl-orange: #E8631A;
+  }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: 'Poppins', sans-serif;
+    background: #f6f6f6;
+    color: var(--col-text);
+    overflow-x: hidden;
+  }
+
+  /* ── STAGE: left text + right diagram, info panel below ── */
+  .stage {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 40px 60px;
+    gap: 48px;
+    flex-wrap: wrap;
+  }
+
+  .right-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Left intro panel */
+  .intro {
+    max-width: 260px;
+    flex-shrink: 0;
+    opacity: 0;
+    transform: translateX(-20px);
+    animation: fadeLeft 0.7s ease 0.2s forwards;
+  }
+
+  .intro h2 {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.6px;
+    color: var(--col-heading);
+    margin-bottom: 14px;
+    line-height: 1.2;
+  }
+
+  .intro p {
+    font-size: 13px;
+    color: #666;
+    line-height: 1.7;
+    margin-bottom: 20px;
+  }
+
+  .intro-prompt {
+    font-size: 12px;
+    color: #aaa;
+    letter-spacing: 0.3px;
+  }
+
+  @keyframes fadeLeft {
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes fadeDown {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── HEX CONTAINER ── */
+  .hex-container {
+    position: relative;
+    width: 520px;
+    height: 520px;
+    flex-shrink: 0;
+  }
+
+  /* Centre hexagon */
+  .hex-centre {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 165px;
+    height: 165px;
+    z-index: 10;
+    cursor: pointer;
+  }
+
+  .hex-centre svg { width: 100%; height: 100%; }
+
+  .hex-centre-text {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: #132076;
+    line-height: 1.35;
+    pointer-events: none;
+    width: 120px;
+  }
+
+  /* Orbit elements */
+  .orbit-ring {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 0; height: 0;
+  }
+
+  .hex-element {
+    position: absolute;
+    width: 150px;
+    height: 150px;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    transition: filter 0.25s ease, transform 0.25s ease;
+    opacity: 0;
+  }
+
+  .hex-element:hover {
+    filter: brightness(1.08) drop-shadow(0 4px 18px rgba(0,0,0,0.18));
+    transform: translate(-50%, -50%) scale(1.08);
+    z-index: 20;
+  }
+
+  .hex-element.active {
+    filter: brightness(1.1) drop-shadow(0 6px 24px rgba(0,0,0,0.22));
+    transform: translate(-50%, -50%) scale(1.1);
+    z-index: 20;
+  }
+
+  .hex-element svg { width: 100%; height: 100%; }
+
+  .hex-el-text {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #132076;
+    line-height: 1.35;
+    pointer-events: none;
+    width: 110px;
+  }
+
+  /* ── SPIN REVEAL ANIMATION ── */
+  @keyframes spinReveal {
+    0%   { opacity: 0; transform: translate(-50%, -50%) rotate(var(--start-angle)) scale(0.3); }
+    100% { opacity: 1; transform: translate(-50%, -50%) rotate(0deg) scale(1); }
+  }
+
+  /* ── CONNECTOR LINES ── */
+  .connectors {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    opacity: 0;
+    animation: fadeIn 0.5s ease 2.2s forwards;
+  }
+
+  @keyframes fadeIn {
+    to { opacity: 1; }
+  }
+
+  /* ── CENTRE PULSE ── */
+  @keyframes centreReveal {
+    0%   { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+    100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  }
+
+  .hex-centre { animation: centreReveal 0.7s cubic-bezier(0.34, 0.5, 0.56, 0.95) 0.05s both; }
+
+  .hex-centre.active-centre {
+    filter: brightness(1.08) drop-shadow(0 6px 24px rgba(0,0,0,0.22));
+    transform: translate(-50%, -50%) scale(1.05);
+    z-index: 30;
+  }
+
+  .pulse-ring {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 175px; height: 175px;
+    border-radius: 50%;
+    border: 2px solid var(--col-centre);
+    transform: translate(-50%, -50%) scale(1);
+    animation: pulseRing 3s ease-out 2.8s infinite;
+    pointer-events: none;
+    z-index: 5;
+    opacity: 0;
+  }
+
+  @keyframes pulseRing {
+    0%   { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
+    100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+  }
+
+  /* ── INFO PANEL (below on mobile, replaces prompt on desktop) ── */
+  .info-panel {
+    width: 100%;
+    max-width: 520px;
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px 26px;
+    margin-top: 20px;
+    box-shadow: 0 4px 32px rgba(0,0,0,0.07);
+    border-left: 5px solid var(--panel-accent, #ccc);
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.35s ease, transform 0.35s ease, border-color 0.3s ease;
+    pointer-events: none;
+  }
+
+  .info-panel.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: all;
+  }
+
+  .info-panel-eyebrow {
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--panel-accent, #999);
+    margin-bottom: 6px;
+  }
+
+  .info-panel h3 {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    margin-bottom: 8px;
+    color: var(--col-heading);
+    line-height: 1.3;
+  }
+
+  .info-panel p {
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: #555;
+    margin-bottom: 16px;
+  }
+
+  .info-panel-tagline {
+    font-size: 11px;
+    font-weight: 600;
+    color: #4a4a4a;
+    letter-spacing: 0.3px;
+    margin-bottom: 14px;
+    font-style: italic;
+  }
+
+  .btn-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--panel-accent, #ccc);
+    color: #132076;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 9px 16px;
+    border-radius: 8px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: filter 0.2s ease, transform 0.2s ease;
+    font-family: 'Poppins', sans-serif;
+  }
+
+  .btn-link:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+  }
+
+  .btn-link svg { width: 13px; height: 13px; }
+
+  /* left column wrapper holds intro only */
+  .left-col {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    min-width: 260px;
+  }
+
+  /* info panel sits below diagram */
+  .below-panel {
+    width: 100%;
+    max-width: 520px;
+    margin-top: 28px;
+  }
+
+  /* responsive */
+  @media (max-width: 860px) {
+    .stage {
+      flex-direction: column;
+      align-items: center;
+      padding: 30px 16px 50px;
+      gap: 24px;
+    }
+    .intro { max-width: 480px; transform: translateY(-20px); text-align: center; align-items: center; }
+    .hex-container { width: 360px; height: 360px; }
+    .hex-element { width: 105px; height: 105px; }
+    .hex-centre { width: 118px; height: 118px; }
+    .hex-el-text { font-size: 10px; width: 82px; }
+    .hex-centre-text { font-size: 10.5px; width: 90px; }
+    .info-panel { max-width: 480px; }
+    .left-col { align-items: center; min-width: unset; width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<main class="stage">
+
+  <!-- Left column: intro text -->
+  <div class="left-col">
+    <div class="intro">
+      <h2>Our Safety Management System</h2>
+      <p><strong>Select any element to understand what it means for your role.</strong></p>
+    </div>
+  </div>
+
+  <!-- Right column: hex diagram + info panel below -->
+  <div class="right-col">
+    <div class="hex-container" id="hexContainer">
+      <svg class="connectors" viewBox="0 0 520 520" xmlns="http://www.w3.org/2000/svg" id="connectorSvg"></svg>
+      <div class="pulse-ring"></div>
+      <div class="hex-centre" id="hexCentre">
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="50,2 93,26 93,74 50,98 7,74 7,26" fill="#ffc695" stroke="#c4c2bb" stroke-width="1.5"/>
+        </svg>
+        <div class="hex-centre-text">Leadership,<br>Compliance &amp;<br>Commitment</div>
+      </div>
+      <div class="orbit-ring" id="orbitRing"></div>
+    </div>
+
+    <!-- Info panel below diagram -->
+    <div class="info-panel" id="infoPanel">
+      <div class="info-panel-eyebrow" id="panelEyebrow">Safety Management System</div>
+      <h3 id="panelTitle">Element name</h3>
+      <div class="info-panel-tagline" id="panelTagline"></div>
+      <p id="panelDesc">Description here.</p>
+      <button class="btn-link" id="panelLink" onclick="handleLink()">
+        View element page
+        <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 8h10M9 4l4 4-4 4" stroke="#132076" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const ELEMENTS = [
+  {
+    id: 'hazards',
+    label: 'Hazards &\nRisk Management',
+    tagline: 'Spot it, report it, fix it.',
+    color: '#cba188',
+    angle: 90,
+    desc: 'This element covers how we identify, assess and control workplace hazards before they cause harm. It includes our risk registers, hazard reporting processes and the controls we put in place to keep every Employee safe.',
+    link: '#hazards-risk'
+  },
+  {
+    id: 'incident',
+    label: 'Incident &\nInjury Management',
+    tagline: 'When incidents happen.',
+    color: '#b2c2cf',
+    angle: 30,
+    desc: 'When something goes wrong, this element guides how we respond, report and recover. It covers incident notification through iService, investigation processes, return-to-work support and what we learn from each event to prevent recurrence.',
+    link: '#incident-injury'
+  },
+  {
+    id: 'emergency',
+    label: 'Emergency &\nCritical Incident',
+    tagline: 'Know what to do and when.',
+    color: '#bee6dc',
+    angle: 330,
+    desc: 'This element prepares every Employee to respond effectively to emergencies, from building evacuations at Footscray, Dandenong and Bendigo, to critical incidents involving clients or staff. Clear plans, trained wardens and tested procedures.',
+    link: '#emergency'
+  },
+  {
+    id: 'health',
+    label: 'Health, Wellbeing &\nPsychological Safety',
+    tagline: 'Look after yourself and your team.',
+    color: '#b2b2cf',
+    angle: 270,
+    desc: 'A safe workplace supports more than physical health. This element covers mental health, psychological safety, EAP access through Assure Programs, fatigue management and creating an environment where everyone feels safe to speak up.',
+    link: '#health-wellbeing'
+  },
+  {
+    id: 'remote',
+    label: 'Remote &\nOff-Site Work',
+    tagline: 'Staying safe away from the office.',
+    color: '#f1d99a',
+    angle: 210,
+    desc: 'Our obligations to Employees do not stop at the office door. This element covers home-based work, client visits, motor vehicle use and any situation where Employees are working away from a State Trustees site.',
+    link: '#remote-offsite'
+  },
+  {
+    id: 'facilities',
+    label: 'Facilities &\nContractor Management',
+    tagline: 'Our workplace and those working in it.',
+    color: '#e7cdc2',
+    angle: 150,
+    desc: 'This element governs the physical safety of our workplaces and the management of contractors, suppliers and visitors. It includes site inductions, contractor WHS obligations and the maintenance of safe physical environments across all sites.',
+    link: '#facilities'
+  }
+];
+
+const RADIUS_DESKTOP = 178;
+const orbitRing  = document.getElementById('orbitRing');
+const infoPanel  = document.getElementById('infoPanel');
+let activeId = null;
+
+function hexPoints(cx, cy, r) {
+  return Array.from({length:6}, (_,i) => {
+    const a = Math.PI/180 * (60*i - 30);
+    return `${cx + r*Math.cos(a)},${cy + r*Math.sin(a)}`;
+  }).join(' ');
+}
+
+function getRadius() {
+  return window.innerWidth < 860 ? 120 : RADIUS_DESKTOP;
+}
+
+function getCentre() {
+  return window.innerWidth < 860 ? 180 : 260;
+}
+
+function buildConnectors() {
+  const svg = document.getElementById('connectorSvg');
+  const size = window.innerWidth < 860 ? 360 : 520;
+  svg.setAttribute('viewBox', `0 0 ${size} ${size}`);
+  svg.innerHTML = '';
+  const cx = size / 2, cy = size / 2;
+  ELEMENTS.forEach(el => {
+    const rad = Math.PI / 180 * el.angle;
+    const r = getRadius();
+    const x = cx + r * Math.cos(rad);
+    const y = cy + r * Math.sin(rad);
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', cx); line.setAttribute('y1', cy);
+    line.setAttribute('x2', x);  line.setAttribute('y2', y);
+    line.setAttribute('stroke', el.color);
+    line.setAttribute('stroke-width', '1.5');
+    line.setAttribute('stroke-opacity', '0.5');
+    line.setAttribute('stroke-dasharray', '4 4');
+    svg.appendChild(line);
+  });
+}
+
+function buildElements() {
+  orbitRing.innerHTML = '';
+  const r = getRadius();
+
+  ELEMENTS.forEach((el, i) => {
+    const rad = Math.PI / 180 * el.angle;
+    const x = r * Math.cos(rad);
+    const y = r * Math.sin(rad);
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'hex-element';
+    wrapper.id = `el-${el.id}`;
+    wrapper.style.left = x + 'px';
+    wrapper.style.top  = y + 'px';
+
+    const delay = 0.15 + i * 0.18;
+    const startAngle = (el.angle > 180) ? -540 : 540;
+    wrapper.style.setProperty('--start-angle', startAngle + 'deg');
+    wrapper.style.animation = `spinReveal 1s cubic-bezier(0.34, 0.5, 0.56, 0.95) ${delay}s both`;
+
+    const labelLines = el.label.split('\n');
+
+    wrapper.innerHTML = `
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="${hexPoints(50,50,48)}" fill="${el.color}" stroke="#c4c2bb" stroke-width="1.5"/>
+      </svg>
+      <div class="hex-el-text">${labelLines.map(l => `<div>${l}</div>`).join('')}</div>
+    `;
+
+    wrapper.addEventListener('click', () => selectElement(el.id));
+    orbitRing.appendChild(wrapper);
+  });
+}
+
+function selectElement(id) {
+  const el = ELEMENTS.find(e => e.id === id);
+  if (!el) return;
+
+  // ensure centre tile is not highlighted when selecting orbit elements
+  const centreEl = document.getElementById('hexCentre');
+  if (centreEl) centreEl.classList.remove('active-centre');
+
+  if (activeId === id) {
+    activeId = null;
+    document.querySelectorAll('.hex-element').forEach(e => e.classList.remove('active'));
+    infoPanel.classList.remove('visible');
+    return;
+  }
+
+  activeId = id;
+  document.querySelectorAll('.hex-element').forEach(e => {
+    e.classList.toggle('active', e.id === `el-${id}`);
+  });
+
+  infoPanel.style.setProperty('--panel-accent', el.color);
+  document.getElementById('panelEyebrow').textContent = 'Safety Management System';
+  document.getElementById('panelTitle').textContent    = el.label.replace('\n', ' ');
+  document.getElementById('panelTagline').textContent  = el.tagline;
+  document.getElementById('panelDesc').textContent     = el.desc;
+  document.getElementById('panelLink').dataset.link    = el.link;
+  document.getElementById('panelLink').style.background = el.color;
+
+  infoPanel.classList.add('visible');
+
+  if (window.innerWidth < 860) {
+    setTimeout(() => {
+      infoPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 100);
+  }
+}
+
+function handleLink() {
+  const link = document.getElementById('panelLink').dataset.link;
+  if (link && link !== '#') window.location.href = link;
+  else alert('Link to element page - connect to your SharePoint URL here.');
+}
+
+// Centre tile click handling: show panel with centre content and accent
+const hexCentreEl = document.getElementById('hexCentre');
+if (hexCentreEl) {
+  function selectCentre() {
+    const centre = {
+      label: 'Leadership, Compliance & Commitment',
+      tagline: 'The foundation everything else is built on.',
+      color: '#ffc695',
+      desc: 'Leadership, Compliance and Commitment sits at the centre of the Safety Management System because safety starts here. It covers our legal obligations under the OHS Act 2004, the accountability of every leader to model safe behaviours, and the commitment of every person at State Trustees to uphold our safety standards. Without this element, none of the others can function.',
+      link: '#'
+    };
+
+    const wasActive = hexCentreEl.classList.contains('active-centre');
+    // clear orbit selections
+    document.querySelectorAll('.hex-element').forEach(e => e.classList.remove('active'));
+
+    if (wasActive) {
+      hexCentreEl.classList.remove('active-centre');
+      infoPanel.classList.remove('visible');
+      activeId = null;
+    } else {
+      hexCentreEl.classList.add('active-centre');
+      infoPanel.style.setProperty('--panel-accent', centre.color);
+      document.getElementById('panelEyebrow').textContent = 'Safety Management System';
+      document.getElementById('panelTitle').textContent = centre.label;
+      document.getElementById('panelTagline').textContent = centre.tagline;
+      document.getElementById('panelDesc').textContent = centre.desc;
+      document.getElementById('panelLink').dataset.link = centre.link;
+      document.getElementById('panelLink').style.background = centre.color;
+
+      infoPanel.classList.add('visible');
+      activeId = 'centre';
+
+      if (window.innerWidth < 860) {
+        setTimeout(() => {
+          infoPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
+      }
+    }
+  }
+
+  hexCentreEl.addEventListener('click', selectCentre);
+}
+
+buildConnectors();
+buildElements();
+
+window.addEventListener('resize', () => {
+  buildConnectors();
+  buildElements();
+});
+</script>
+</body>
+</html>
