@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Safety Management System – State Trustees</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    margin: 0; padding: 0;
+    font-family: 'Poppins', sans-serif;
+    background: #f6f6f6;
+    width: 100%; height: 100%;
+  }
+
+  .stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100vw;
+    height: 100vh;
+    gap: 14px;
+  }
+
+  .hex-svg {
+    width: min(96vw, 88vh);
+    height: min(96vw, 88vh);
+  }
+
+  .prompt {
+    font-family: 'Poppins', sans-serif;
+    font-size: clamp(13px, 1.3vw, 16px);
+    color: #132076;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease 2.4s forwards;
+  }
+
+  @keyframes fadeUp { to { opacity: 1; } }
+
+  .hex-group { cursor: pointer; }
+  .hex-group polygon { transition: filter 0.3s ease; }
+  .hex-group:hover polygon { filter: brightness(1.08) drop-shadow(0 4px 14px rgba(0,0,0,0.16)); }
+  .hex-group.active polygon { filter: brightness(1.12) drop-shadow(0 6px 22px rgba(0,0,0,0.2)); }
+
+  .el-group {
+    opacity: 0;
+    animation: floatIn 0.75s cubic-bezier(0.22,1,0.36,1) var(--d,0.1s) forwards;
+  }
+
+  .centre-group {
+    opacity: 0;
+    animation: popIn 0.55s cubic-bezier(0.34,1.56,0.64,1) 1.5s forwards;
+  }
+
+  @keyframes floatIn {
+    0%   { opacity:0; transform: translateY(16px); }
+    100% { opacity:1; transform: translateY(0); }
+  }
+
+  @keyframes popIn {
+    0%   { opacity:0; transform: scale(0.5); }
+    100% { opacity:1; transform: scale(1); }
+  }
+
+  .connector { opacity:0; animation: fadeIn 0.5s ease 2s forwards; }
+  @keyframes fadeIn { to { opacity:1; } }
+
+  .pulse-circle {
+    opacity: 0;
+    transform-origin: 500px 500px;
+    animation: pulseRing 4s ease-out 2.5s infinite;
+  }
+
+  @keyframes pulseRing {
+    0%   { opacity:0.5; transform: scale(1); }
+    100% { opacity:0;   transform: scale(2.8); }
+  }
+
+  /* OVERLAY */
+  .overlay-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(10,20,80,0.45);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(6px);
+  }
+
+  .overlay-backdrop.visible { display: flex !important; }
+
+  .info-panel {
+    width: 92%;
+    max-width: 520px;
+    background: #fff;
+    border-radius: 22px;
+    padding: 40px 44px 36px;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.2);
+    border-top: 5px solid var(--panel-accent, #ccc);
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.35s cubic-bezier(0.22,1,0.36,1), transform 0.35s cubic-bezier(0.22,1,0.36,1);
+    pointer-events: none;
+    position: relative;
+  }
+
+  .info-panel.visible { opacity:1; transform:translateY(0); pointer-events:all; }
+
+  .close-btn {
+    position: absolute; top:16px; right:18px;
+    background: #f4f4f4; border: none; font-size: 16px; cursor: pointer;
+    color: #555; padding: 6px 10px; border-radius: 8px;
+    transition: background 0.15s, color 0.15s;
+    font-family: 'Poppins', sans-serif; font-weight: 600;
+  }
+
+  .close-btn:hover { background: #e8e8e8; color: #132076; }
+
+  .info-panel-eyebrow {
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 2.5px;
+    color: #555; margin-bottom: 10px;
+  }
+
+  .info-panel h3 {
+    font-size: 22px; font-weight: 700;
+    color: #132076; margin-bottom: 6px; line-height: 1.2;
+  }
+
+  .info-panel-tagline {
+    font-size: 14px; font-weight: 600;
+    color: #333;
+    margin-bottom: 16px;
+  }
+
+  .info-panel p {
+    font-size: 15px; line-height: 1.75;
+    color: #333; margin-bottom: 28px;
+  }
+
+  .btn-link {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--panel-accent, #ccc);
+    color: #132076; font-size: 14px; font-weight: 700;
+    padding: 12px 24px; border-radius: 12px;
+    border: none; cursor: pointer;
+    font-family: 'Poppins', sans-serif;
+    transition: filter 0.2s, transform 0.2s;
+  }
+
+  .btn-link:hover { filter: brightness(1.07); transform: translateY(-2px); }
+  .btn-link svg { width:14px; height:14px; }
+</style>
+</head>
+<body>
+<main class="stage">
+
+  <!-- 
+    SVG coordinate system: 1000x1000 viewBox
+    Centre hex: cx=500, cy=500, radius=140
+    Outer hex: radius=105, orbit radius=310
+    Hexagon polygon formula for flat-top at (cx,cy) with radius r:
+    points relative to origin, then translate
+  -->
+  <svg class="hex-svg" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="g-health"     x1="25%" y1="15%" x2="80%" y2="90%"><stop offset="0%" stop-color="#c8c8e8" stop-opacity="0.75"/><stop offset="100%" stop-color="#b2b2cf"/></linearGradient>
+      <linearGradient id="g-emergency"  x1="25%" y1="15%" x2="80%" y2="90%"><stop offset="0%" stop-color="#d6f2ea" stop-opacity="0.75"/><stop offset="100%" stop-color="#bee6dc"/></linearGradient>
+      <linearGradient id="g-incident"   x1="25%" y1="15%" x2="80%" y2="90%"><stop offset="0%" stop-color="#ccdae4" stop-opacity="0.75"/><stop offset="100%" stop-color="#b2c2cf"/></linearGradient>
+      <linearGradient id="g-hazards"    x1="25%" y1="15%" x2="80%" y2="90%"><stop offset="0%" stop-color="#ddbba0" stop-opacity="0.75"/><stop offset="100%" stop-color="#cba188"/></linearGradient>
+      <linearGradient id="g-remote"     x1="25%" y1="15%" x2="80%" y2="90%"><stop offset="0%" stop-color="#faeec0" stop-opacity="0.75"/><stop offset="100%" stop-color="#f1d99a"/></linearGradient>
+      <linearGradient id="g-facilities" x1="25%" y1="15%" x2="80%" y2="90%"><stop offset="0%" stop-color="#f4e0d8" stop-opacity="0.75"/><stop offset="100%" stop-color="#e7cdc2"/></linearGradient>
+      <linearGradient id="g-centre"     x1="25%" y1="15%" x2="80%" y2="90%"><stop offset="0%" stop-color="#ffe8cc"/><stop offset="100%" stop-color="#ffc695"/></linearGradient>
+    </defs>
+
+    <!-- Pulse ring -->
+    <circle class="pulse-circle" cx="500" cy="500" r="130" fill="none" stroke="#ffc695" stroke-width="2.5"/>
+
+    <!-- Connectors: orbit radius 310 -->
+    <!-- health top: 500, 190 -->
+    <line class="connector" x1="500" y1="500" x2="500" y2="190"  stroke="#b2b2cf" stroke-width="1.8" stroke-dasharray="6 5" stroke-opacity="0.5"/>
+    <!-- emergency top-right: 769, 345 -->
+    <line class="connector" x1="500" y1="500" x2="769" y2="345"  stroke="#bee6dc" stroke-width="1.8" stroke-dasharray="6 5" stroke-opacity="0.5"/>
+    <!-- incident bottom-right: 769, 655 -->
+    <line class="connector" x1="500" y1="500" x2="769" y2="655"  stroke="#b2c2cf" stroke-width="1.8" stroke-dasharray="6 5" stroke-opacity="0.5"/>
+    <!-- hazards bottom: 500, 810 -->
+    <line class="connector" x1="500" y1="500" x2="500" y2="810"  stroke="#cba188" stroke-width="1.8" stroke-dasharray="6 5" stroke-opacity="0.5"/>
+    <!-- remote bottom-left: 231, 655 -->
+    <line class="connector" x1="500" y1="500" x2="231" y2="655"  stroke="#f1d99a" stroke-width="1.8" stroke-dasharray="6 5" stroke-opacity="0.5"/>
+    <!-- facilities top-left: 231, 345 -->
+    <line class="connector" x1="500" y1="500" x2="231" y2="345"  stroke="#e7cdc2" stroke-width="1.8" stroke-dasharray="6 5" stroke-opacity="0.5"/>
+
+    <!-- HEALTH WELLBEING top (500, 190), r=105 -->
+    <!-- flat-top hex points: (cx, cy-r), (cx+r*cos30, cy-r*sin30)... -->
+    <!-- Using pointy-top: (cx, cy-r), (cx+r*sin60, cy-r*cos60), ... -->
+    <g class="el-group hex-group" style="--d:0.06s" data-id="health">
+      <polygon points="500,85 591,137 591,243 500,295 409,243 409,137" fill="url(#g-health)" stroke="rgba(255,255,255,0.8)" stroke-width="2.5"/>
+      <text font-family="Poppins,sans-serif" font-weight="500" fill="#132076" text-anchor="middle">
+        <tspan x="500" y="175" font-size="17">Health, Wellbeing &amp;</tspan>
+        <tspan x="500" dy="22" font-size="17">Psychological Safety</tspan>
+      </text>
+    </g>
+
+    <!-- EMERGENCY top-right (769, 345), r=105 -->
+    <g class="el-group hex-group" style="--d:0.18s" data-id="emergency">
+      <polygon points="769,240 860,292 860,398 769,450 678,398 678,292" fill="url(#g-emergency)" stroke="rgba(255,255,255,0.8)" stroke-width="2.5"/>
+      <text font-family="Poppins,sans-serif" font-weight="500" fill="#132076" text-anchor="middle">
+        <tspan x="769" y="334" font-size="17">Emergency &amp;</tspan>
+        <tspan x="769" dy="22" font-size="17">Critical Incident</tspan>
+      </text>
+    </g>
+
+    <!-- INCIDENT bottom-right (769, 655), r=105 -->
+    <g class="el-group hex-group" style="--d:0.30s" data-id="incident">
+      <polygon points="769,550 860,602 860,708 769,760 678,708 678,602" fill="url(#g-incident)" stroke="rgba(255,255,255,0.8)" stroke-width="2.5"/>
+      <text font-family="Poppins,sans-serif" font-weight="500" fill="#132076" text-anchor="middle">
+        <tspan x="769" y="644" font-size="17">Incident &amp;</tspan>
+        <tspan x="769" dy="22" font-size="17">Injury Management</tspan>
+      </text>
+    </g>
+
+    <!-- HAZARDS bottom (500, 810), r=105 -->
+    <g class="el-group hex-group" style="--d:0.42s" data-id="hazards">
+      <polygon points="500,705 591,757 591,863 500,915 409,863 409,757" fill="url(#g-hazards)" stroke="rgba(255,255,255,0.8)" stroke-width="2.5"/>
+      <text font-family="Poppins,sans-serif" font-weight="500" fill="#132076" text-anchor="middle">
+        <tspan x="500" y="799" font-size="17">Hazards &amp;</tspan>
+        <tspan x="500" dy="22" font-size="17">Risk Management</tspan>
+      </text>
+    </g>
+
+    <!-- REMOTE bottom-left (231, 655), r=105 -->
+    <g class="el-group hex-group" style="--d:0.54s" data-id="remote">
+      <polygon points="231,550 322,602 322,708 231,760 140,708 140,602" fill="url(#g-remote)" stroke="rgba(255,255,255,0.8)" stroke-width="2.5"/>
+      <text font-family="Poppins,sans-serif" font-weight="500" fill="#132076" text-anchor="middle">
+        <tspan x="231" y="644" font-size="17">Remote &amp;</tspan>
+        <tspan x="231" dy="22" font-size="17">Off-Site Work</tspan>
+      </text>
+    </g>
+
+    <!-- FACILITIES top-left (231, 345), r=105 -->
+    <g class="el-group hex-group" style="--d:0.66s" data-id="facilities">
+      <polygon points="231,240 322,292 322,398 231,450 140,398 140,292" fill="url(#g-facilities)" stroke="rgba(255,255,255,0.8)" stroke-width="2.5"/>
+      <text font-family="Poppins,sans-serif" font-weight="500" fill="#132076" text-anchor="middle">
+        <tspan x="231" y="325" font-size="15">Facilities &amp;</tspan>
+        <tspan x="231" dy="20" font-size="15">Contractor</tspan>
+        <tspan x="231" dy="20" font-size="15">Management</tspan>
+      </text>
+    </g>
+
+    <!-- CENTRE (500, 500), r=140 -->
+    <g class="centre-group hex-group" data-id="centre">
+      <polygon points="500,360 621,430 621,570 500,640 379,570 379,430" fill="url(#g-centre)" stroke="rgba(255,255,255,0.9)" stroke-width="3"/>
+      <text font-family="Poppins,sans-serif" font-weight="700" fill="#132076" text-anchor="middle">
+        <tspan x="500" y="478" font-size="20">Leadership,</tspan>
+        <tspan x="500" dy="26" font-size="20">Compliance &amp;</tspan>
+        <tspan x="500" dy="26" font-size="20">Commitment</tspan>
+      </text>
+    </g>
+
+  </svg>
+
+  <p class="prompt">Select any element to explore our Safety Management System.</p>
+</main>
+
+<div class="overlay-backdrop" id="overlayBackdrop">
+  <div class="info-panel" id="infoPanel">
+    <button class="close-btn" onclick="closePanel()">&#x2715;</button>
+    <div class="info-panel-eyebrow" id="panelEyebrow">Safety Management System</div>
+    <h3 id="panelTitle"></h3>
+    <div class="info-panel-tagline" id="panelTagline"></div>
+    <p id="panelDesc"></p>
+    <button class="btn-link" id="panelLink" onclick="handleLink()">
+      View element
+      <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 8h10M9 4l4 4-4 4" stroke="#132076" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<script>
+const DATA = {
+  health:     { label:'Health, Wellbeing & Psychological Safety', tagline:'Look after yourself and your team.', color:'#b2b2cf', desc:'A safe workplace supports more than physical health. This element covers mental health, psychological safety, fatigue management and creating an environment where everyone feels safe to speak up.', link:'https://statetrustees.sharepoint.com/sites/WorkHealthSaftey/SitePages/Workplace-Health-and-Safety-Management-System.aspx#health%2C-wellbeing-psychological-safety' },
+  emergency:  { label:'Emergency & Critical Incident', tagline:'Know what to do and when.', color:'#bee6dc', desc:'This element prepares every Employee to respond effectively to emergencies, from building evacuations to critical incidents involving clients or staff. Clear plans, trained wardens and tested procedures.', link:'https://statetrustees.sharepoint.com/sites/WorkHealthSaftey/SitePages/Workplace-Health-and-Safety-Management-System.aspx#emergency-critical-incident-management' },
+  incident:   { label:'Incident & Injury Management', tagline:'When incidents happen.', color:'#b2c2cf', desc:'When something goes wrong, this element guides how we respond, report and recover. It covers incident notification through iService, investigation processes, return-to-work support and what we learn from each event to prevent recurrence.', link:'https://statetrustees.sharepoint.com/sites/WorkHealthSaftey/SitePages/Workplace-Health-and-Safety-Management-System.aspx#incident-injury-management' },
+  hazards:    { label:'Hazards & Risk Management', tagline:'Spot it, report it, fix it.', color:'#cba188', desc:'This element covers how we identify, assess and control workplace hazards before they cause harm. It includes our risk registers, hazard reporting processes and the controls we put in place to keep every Employee safe.', link:'https://statetrustees.sharepoint.com/sites/WorkHealthSaftey/SitePages/Workplace-Health-and-Safety-Management-System.aspx#hazards-and-risk-management' },
+  remote:     { label:'Remote & Off-Site Work', tagline:'Staying safe away from the office.', color:'#f1d99a', desc:'Our obligations to Employees do not stop at the office door. This element covers home-based work, client visits, motor vehicle use and any situation where Employees are working away from a State Trustees site.', link:'https://statetrustees.sharepoint.com/sites/WorkHealthSaftey/SitePages/Workplace-Health-and-Safety-Management-System.aspx#remote-off-site-work' },
+  facilities: { label:'Facilities & Contractor Management', tagline:'Our workplace and those working in it.', color:'#e7cdc2', desc:'This element governs the physical safety of our workplaces and the management of contractors, suppliers and visitors. It includes site inductions, contractor WHS obligations and the maintenance of safe physical environments across all sites.', link:'https://statetrustees.sharepoint.com/sites/WorkHealthSaftey/SitePages/Workplace-Health-and-Safety-Management-System.aspx#facilities-contractor-management' },
+  centre:     { label:'Leadership, Compliance & Commitment', tagline:'The foundation everything else is built on.', color:'#ffc695', desc:'Leadership, Compliance and Commitment sits at the centre of the Safety Management System because safety starts here. It covers our legal obligations, the accountability of every Employee and the commitment of every person at State Trustees to uphold our safety standards. Without this element, none of the others can function.', link:'https://statetrustees.sharepoint.com/sites/WorkHealthSaftey/SitePages/Workplace-Health-and-Safety-Management-System.aspx#leadership%2C-compliance-commitment' }
+};
+
+const infoPanel = document.getElementById('infoPanel');
+const backdrop  = document.getElementById('overlayBackdrop');
+let activeId = null;
+
+document.querySelectorAll('.hex-group').forEach(g => {
+  g.addEventListener('click', () => {
+    const id = g.dataset.id;
+    const d  = DATA[id];
+    if (!d) return;
+    if (activeId === id) { closePanel(); return; }
+    activeId = id;
+    document.querySelectorAll('.hex-group').forEach(x => x.classList.remove('active'));
+    g.classList.add('active');
+    infoPanel.style.setProperty('--panel-accent', d.color);
+    document.getElementById('panelEyebrow').textContent  = 'Safety Management System';
+    document.getElementById('panelTitle').textContent    = d.label;
+    document.getElementById('panelTagline').textContent  = d.tagline;
+    document.getElementById('panelDesc').textContent     = d.desc;
+    document.getElementById('panelLink').dataset.link    = d.link;
+    document.getElementById('panelLink').style.background = d.color;
+    backdrop.style.display = 'flex';
+    setTimeout(() => { backdrop.classList.add('visible'); infoPanel.classList.add('visible'); }, 10);
+  });
+});
+
+function closePanel() {
+  infoPanel.classList.remove('visible');
+  backdrop.classList.remove('visible');
+  setTimeout(() => { backdrop.style.display = 'none'; }, 350);
+  document.querySelectorAll('.hex-group').forEach(x => x.classList.remove('active'));
+  activeId = null;
+}
+
+function handleLink() {
+  const link = document.getElementById('panelLink').dataset.link;
+  if (link && link !== '#') {
+    if (window.top && window.top !== window.self) {
+      window.top.location.href = link;
+    } else {
+      window.location.href = link;
+    }
+  }
+}
+
+backdrop.addEventListener('click', e => { if (e.target === backdrop) closePanel(); });
+</script>
+</body>
+</html>
